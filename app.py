@@ -137,6 +137,7 @@ def add_expense():
 
     expense = {
         'id': len(expenses) + 1 if not expenses else max(e.get('id', 0) for e in expenses) + 1,
+        'name': data.get('name', ''),
         'category': data['category'],
         'amount': amount,
         'date': data['date'],
@@ -158,6 +159,46 @@ def delete_expense(expense_id):
     expenses = [e for e in expenses if e.get('id') != expense_id]
     save_expenses(expenses)
     return jsonify({'message': 'Harcama silindi'})
+
+
+@app.route('/api/expenses/<int:expense_id>', methods=['PUT'])
+def update_expense(expense_id):
+    """Harcamayı güncelle"""
+    data = request.get_json()
+
+    if not data:
+        return jsonify({'error': 'Veri bulunamadı'}), 400
+
+    expenses = load_expenses()
+    expense = next((e for e in expenses if e.get('id') == expense_id), None)
+
+    if not expense:
+        return jsonify({'error': 'Harcama bulunamadı'}), 404
+
+    # Güncelle
+    if 'category' in data and data['category']:
+        expense['category'] = data['category']
+    if 'amount' in data:
+        try:
+            amount = float(data['amount'])
+            if amount <= 0:
+                return jsonify({'error': 'Tutar pozitif olmalıdır'}), 400
+            expense['amount'] = amount
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Geçersiz tutar'}), 400
+    if 'date' in data and data['date']:
+        expense['date'] = data['date']
+    if 'time' in data and data['time']:
+        expense['time'] = data['time']
+    if 'name' in data:
+        expense['name'] = data['name']
+    if 'description' in data:
+        expense['description'] = data['description']
+
+    expense['updated_at'] = datetime.now().isoformat()
+
+    save_expenses(expenses)
+    return jsonify({'message': 'Harcama güncellendi', 'expense': expense})
 
 
 @app.route('/api/stats', methods=['GET'])
